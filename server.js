@@ -1,25 +1,20 @@
 const express = require("express");
-const app = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
-// const bcrypt = require("bcryptjs");
-// const jwt = require("jsonwebtoken");
-
 require("dotenv").config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      'https://my-client-ochre.vercel.app'
-    ],
-    credentials: true
+    origin: ["http://localhost:3000", "https://my-client-ochre.vercel.app"],
+    credentials: true,
   })
 );
 
-app.options("*", cors());
 // Routes
 const bookRoutes = require("./src/books/bookRoutes");
 const orderRoutes = require("./src/order/order.route");
@@ -33,17 +28,31 @@ app.use("/api/auth", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/bookrequests", bookRequestRoutes);
 
-// ✅ Base route
+// Base route
 app.get("/", (req, res) => {
   res.send("📚 Book Store Server is running!");
 });
 
 // Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((error) => console.error("MongoDB connection error:", error));
+async function connectDB() {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ Connected to MongoDB");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+    process.exit(1);
+  }
+}
+connectDB();
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+// Error Handling Middleware
+app.use((req, res, next) => {
+  res.status(404).json({ message: "Route not found" });
+});
+app.use((err, req, res, next) => {
+  console.error("Server Error:", err);
+  res.status(500).json({ message: "Internal Server Error" });
+});
+
+// Start the Server
+app.listen(PORT, () => console.log(`🚀 Server is running on port ${PORT}`));
